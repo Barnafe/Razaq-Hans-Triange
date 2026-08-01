@@ -1,0 +1,17 @@
+{
+  "name": "hans-triage",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Root project wrapper -- run everything from here with one command. See docs/SETUP.md for one-time setup.",
+  "scripts": {
+    "install:all": "node tools/install-all.mjs",
+    "dev": "concurrently -k -n BACKEND,FRONTEND -c blue,green \"node tools/dev-backend.mjs\" \"npm:dev:frontend\"",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "node tools/start-prod.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

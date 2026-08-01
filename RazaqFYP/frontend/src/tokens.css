@@ -1,0 +1,84 @@
+/* Design tokens for HANS-Triage frontend.
+   Grounded in the supervisor's real design references (teal medical
+   branding, dark sidebar dashboards) -- see docs/design_references/NOTES.md.
+   The 5 triage colors are the actual design signature: they're your
+   system's real clinical output, not a decorative accent. */
+
+:root {
+  /* Brand */
+  --color-teal: #0E7C86;
+  --color-teal-dark: #0A5F67;
+  --color-teal-light: #E3F2F1;
+
+  /* Neutrals */
+  --color-bg: #F7F9FA;
+  --color-surface: #FFFFFF;
+  --color-ink: #16232E;
+  --color-ink-muted: #5A6B7A;
+  --color-border: #E2E8EC;
+
+  /* Sidebar (dark, matches supervisor's dashboard references) */
+  --color-sidebar-bg: #101A24;
+  --color-sidebar-text: #B9C4CE;
+  --color-sidebar-text-active: #FFFFFF;
+
+  /* The 5-level triage spectrum -- THE signature element of this system */
+  --tier-red: #DC2626;
+  --tier-red-bg: #FEF2F2;
+  --tier-orange: #EA580C;
+  --tier-orange-bg: #FFF7ED;
+  --tier-yellow: #CA8A04;
+  --tier-yellow-bg: #FEFCE8;
+  --tier-green: #16A34A;
+  --tier-green-bg: #F0FDF4;
+  --tier-blue: #2563EB;
+  --tier-blue-bg: #EFF6FF;
+
+  /* Type */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+/* Visible keyboard focus, per accessibility floor */
+:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

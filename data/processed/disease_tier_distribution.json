@@ -1,0 +1,58 @@
+{
+  "Typhoid Fever": {
+    "Blue": 0.04,
+    "Green": 0.84,
+    "Yellow": 0.04,
+    "Orange": 0.04,
+    "Red": 0.04
+  },
+  "Pneumonia": {
+    "Blue": 0.0476,
+    "Green": 0.0476,
+    "Yellow": 0.8095,
+    "Orange": 0.0476,
+    "Red": 0.0476
+  },
+  "Sepsis": {
+    "Blue": 0.037,
+    "Green": 0.037,
+    "Yellow": 0.2963,
+    "Orange": 0.5185,
+    "Red": 0.1111
+  },
+  "Bacterial Meningitis": {
+    "Blue": 0.0345,
+    "Green": 0.0345,
+    "Yellow": 0.0345,
+    "Orange": 0.0345,
+    "Red": 0.8621
+  },
+  "Severe Malaria": {
+    "Blue": 0.04,
+    "Green": 0.04,
+    "Yellow": 0.04,
+    "Orange": 0.72,
+    "Red": 0.16
+  },
+  "Severe Pneumonia": {
+    "Blue": 0.0588,
+    "Green": 0.0588,
+    "Yellow": 0.0588,
+    "Orange": 0.7059,
+    "Red": 0.1176
+  },
+  "Uncomplicated Malaria": {
+    "Blue": 0.7674,
+    "Green": 0.1628,
+    "Yellow": 0.0233,
+    "Orange": 0.0233,
+    "Red": 0.0233
+  },
+  "Cerebral Malaria": {
+    "Blue": 0.0769,
+    "Green": 0.0769,
+    "Yellow": 0.0769,
+    "Orange": 0.0769,
+    "Red": 0.6923
+  }
+}
