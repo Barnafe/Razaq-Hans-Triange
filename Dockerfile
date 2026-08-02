@@ -19,6 +19,7 @@ COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
 COPY backend/ backend/
+COPY data/ data/
 COPY --from=frontend-build /app/frontend/dist frontend/dist
 
 # Render sets $PORT at runtime and routes external traffic to it -- do
