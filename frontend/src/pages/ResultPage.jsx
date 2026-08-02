@@ -34,6 +34,42 @@ export default function ResultPage() {
   }
 
   const { triage, partial_failures } = result
+
+  // triage can be null even on a 200 response: the backend isolates each
+  // agent's failure so one broken agent doesn't take down the whole
+  // request, but that means the core triage_agent itself can fail and
+  // still return normally with triage: null + a reason in partial_failures.
+  // Surface that clearly instead of crashing on triage.whatever below.
+  if (!triage) {
+    return (
+      <div style={{ maxWidth: 760 }}>
+        <StepProgress steps={RESULT_STEPS} currentIndex={RESULT_STEPS.length - 1} />
+        <h1 style={{ fontSize: 24, marginBottom: 'var(--space-6)' }}>Assessment Result</h1>
+        <div
+          style={{
+            background: 'var(--tier-red-bg)', border: '1px solid var(--tier-red)',
+            borderRadius: 'var(--radius)', padding: 'var(--space-6)', marginBottom: 'var(--space-6)',
+          }}
+        >
+          <h2 style={{ fontSize: 18, color: 'var(--tier-red)', marginBottom: 8 }}>
+            The triage engine couldn't produce a result for this submission
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--color-ink)', marginBottom: 4 }}>
+            This is a backend calculation error, not a lost submission -- nothing was
+            corrupted, but no tier could be computed for the values you entered.
+          </p>
+          {partial_failures?.triage_agent && (
+            <pre style={{
+              fontSize: 12, background: 'var(--color-surface)', padding: 10, borderRadius: 6,
+              marginTop: 10, whiteSpace: 'pre-wrap', color: 'var(--color-ink-muted)',
+            }}>{partial_failures.triage_agent}</pre>
+          )}
+        </div>
+        <button onClick={() => navigate('/intake')} style={linkButtonStyle}>Start a new assessment</button>
+      </div>
+    )
+  }
+
   const tier = triage?.urgency_classification?.tier
   const topMatch = triage.differential_diagnosis?.[0]
 
