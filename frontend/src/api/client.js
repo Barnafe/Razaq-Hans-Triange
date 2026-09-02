@@ -37,15 +37,67 @@ export async function login(username, password) {
   return res.json()
 }
 
-export async function register(username, password, role = 'clinician') {
+export async function register(username, password, role = 'clinician', email = null) {
   const res = await fetch(`${BASE}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, role }),
+    body: JSON.stringify({ username, password, role, email }),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.detail || `Registration failed: HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function verifyEmail(email, code) {
+  const res = await fetch(`${BASE}/auth/verify-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `Verification failed: HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function resendVerification(email) {
+  const res = await fetch(`${BASE}/auth/resend-verification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `Request failed: HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function forgotPassword(email) {
+  const res = await fetch(`${BASE}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `Request failed: HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function resetPassword(token, newPassword) {
+  const res = await fetch(`${BASE}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, new_password: newPassword }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `Reset failed: HTTP ${res.status}`)
   }
   return res.json()
 }

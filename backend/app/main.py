@@ -27,14 +27,18 @@ from PIL import Image
 from orchestrator import run_pipeline
 from rule_engine import PatientInput
 from vision_agent import inflammation_score, vision_flag_for_triage
-from auth import authenticate, register, UsernameTaken
+from auth import (
+    authenticate, register, UsernameTaken, create_password_reset_token, reset_password_with_token,
+    generate_verification_code, verify_email,
+)
 from persistence import (
     persist_triage_decision, get_recent_decisions, get_all_users,
     get_pending_decisions, get_available_doctors, approve_decision,
     reject_decision, get_assigned_decisions, mark_attended, get_patient_history,
-    get_admin_dashboard_stats, DecisionNotPending, NotAssignedToDoctor,
+    get_admin_dashboard_stats, get_decision_notification_info, DecisionNotPending, NotAssignedToDoctor,
 )
 from connection import db_available
+from notifications import send_password_reset_email, send_approval_notification, send_verification_email
 
 app = FastAPI(
     title="HANS-Triage API",
@@ -54,6 +58,28 @@ class RegisterRequest(BaseModel):
     # 'clinician', 'admin', 'patient', or 'doctor' -- see /auth/register
     # for the honest limitation on self-selecting 'admin'/'doctor'.
     role: str = "clinician"
+    # Optional: not required to register/log in, but required if the
+    # user ever wants to use "Forgot Password?" or receive approval
+    # notifications -- both are email-address-based, not username-based.
+    email: str | None = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class VerifyEmailRequest(BaseModel):
+    email: str
+    code: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: str
 
 
 class ApproveRequest(BaseModel):
@@ -150,7 +176,7 @@ def register_user(request: RegisterRequest):
     if len(request.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
     try:
-        result = register(request.username, request.password, role_name=request.role)
+        result = register(request.username, request.password, role_name=request.role, email=request.email)
     except UsernameTaken as e:
         raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
@@ -158,7 +184,92 @@ def register_user(request: RegisterRequest):
             status_code=503,
             detail=f"Could not reach database: {type(e).__name__}: {e}",
         )
-    return {"status": "ok", "user_id": result["user_id"], "role": result["role"]}
+
+    # Best-effort, own try/except: registration has already succeeded by
+    # here, so a verification-email failure must never undo the account
+    # or fail this response -- the user can always use "Resend code" later.
+    email_verification_sent = False
+    if request.email:
+        try:
+            code = generate_verification_code(request.email)
+            if code:
+                email_verification_sent = send_verification_email(request.email, code)
+        except Exception as e:
+            print(f"[notifications] Could not send verification email to {request.email}: {type(e).__name__}: {e}")
+
+    return {
+        "status": "ok", "user_id": result["user_id"], "role": result["role"],
+        "email_verification_sent": email_verification_sent,
+    }
+
+
+@app.post("/auth/verify-email")
+def verify_email_endpoint(request: VerifyEmailRequest):
+    try:
+        success = verify_email(request.email, request.code)
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not reach database: {type(e).__name__}: {e}",
+        )
+    if not success:
+        raise HTTPException(status_code=400, detail="That code is incorrect, expired, or already used.")
+    return {"status": "ok"}
+
+
+@app.post("/auth/resend-verification")
+def resend_verification(request: ResendVerificationRequest):
+    """
+    Same generic-response pattern as forgot-password: always returns ok
+    so this can't be used to check which emails are registered/verified.
+    """
+    try:
+        code = generate_verification_code(request.email)
+        if code:
+            send_verification_email(request.email, code)
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not reach database: {type(e).__name__}: {e}",
+        )
+    return {"status": "ok", "message": "If that email needs verifying, a new code has been sent."}
+
+
+@app.post("/auth/forgot-password")
+def forgot_password(request: ForgotPasswordRequest):
+    """
+    Always returns the same generic message whether or not the email
+    matches an account -- deliberately, so this endpoint can't be used to
+    check which emails are registered. If it does match, a reset email is
+    sent (best-effort: if Brevo is unreachable or unconfigured, this
+    still returns success rather than leaking that distinction either).
+    """
+    try:
+        token = create_password_reset_token(request.email)
+        if token:
+            send_password_reset_email(request.email, token)
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not reach database: {type(e).__name__}: {e}",
+        )
+    return {"status": "ok", "message": "If that email is registered, a reset link has been sent."}
+
+
+@app.post("/auth/reset-password")
+def reset_password(request: ResetPasswordRequest):
+    if len(request.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    try:
+        success = reset_password_with_token(request.token, request.new_password)
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not reach database: {type(e).__name__}: {e}",
+        )
+    if not success:
+        raise HTTPException(status_code=400, detail="This reset link is invalid or has expired.")
+    return {"status": "ok"}
 
 
 @app.post("/vision-check")
@@ -341,6 +452,17 @@ def approve(decision_id: int, request: ApproveRequest):
             status_code=503,
             detail=f"Could not reach database: {type(e).__name__}: {e}",
         )
+
+    # Best-effort: a notification failure must never undo or fail the
+    # approval itself, which is why this is its own try/except separate
+    # from the block above -- the approval has already succeeded by now.
+    try:
+        info = get_decision_notification_info(decision_id)
+        if info:
+            send_approval_notification(info["patient_email"], info["tier"], info["doctor_username"])
+    except Exception as e:
+        print(f"[notifications] Could not send approval email for decision {decision_id}: {type(e).__name__}: {e}")
+
     return {"status": "ok"}
 
 

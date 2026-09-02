@@ -4,13 +4,12 @@ import { login } from '../api/client'
 
 // Rebuilt to closely match the supervisor's actual reference design:
 // teal gradient bg, decorative icon circles, white card, "Welcome Back!"
-// heading, email/phone + password fields, Google sign-in, EKG line motif.
+// heading, email/phone + password fields, EKG line motif.
 //
 // Now wired to REAL authentication (backend/app/db/auth.py) -- a wrong
-// password genuinely fails. HONEST SCOPE NOTE: no session/token is
-// issued or stored after login -- see auth.py's docstring for what a
-// production version would add. The "Continue with Google" button
-// remains visual only, not connected to real OAuth.
+// password genuinely fails, and login accepts either username or email.
+// HONEST SCOPE NOTE: no session/token is issued or stored after login --
+// see auth.py's docstring for what a production version would add.
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('')
@@ -18,7 +17,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [googleMessage, setGoogleMessage] = useState(null)
   const navigate = useNavigate()
 
   async function handleSubmit(e) {
@@ -133,9 +131,9 @@ export default function LoginPage() {
           </Field>
 
           <div style={{ textAlign: 'right', marginTop: -6 }}>
-            <a href="#" style={{ fontSize: 12, color: 'var(--color-teal)', textDecoration: 'none' }}>
+            <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--color-teal)', textDecoration: 'none' }}>
               Forgot Password?
-            </a>
+            </Link>
           </div>
 
           {error && (
@@ -146,25 +144,6 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: 'var(--space-6) 0' }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-          <span style={{ fontSize: 11, color: 'var(--color-ink-muted)' }}>OR</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setGoogleMessage('Google sign-in requires a registered OAuth app (Google Cloud project) — not set up in this build. Use the form above instead.')}
-          style={googleButtonStyle}
-        >
-          <GoogleIcon /> Continue with Google
-        </button>
-        {googleMessage && (
-          <div style={{ fontSize: 11, color: 'var(--color-ink-muted)', marginTop: 8, textAlign: 'center' }}>
-            {googleMessage}
-          </div>
-        )}
 
         <div style={{ textAlign: 'center', fontSize: 12, marginTop: 'var(--space-4)', color: 'var(--color-ink-muted)' }}>
           Don't have an account? <Link to="/signup" style={{ color: 'var(--color-teal)', fontWeight: 600 }}>Sign Up</Link>
@@ -214,12 +193,6 @@ const signInButtonStyle = {
   border: 'none', borderRadius: 999, padding: '13px', fontWeight: 600, fontSize: 14,
 }
 
-const googleButtonStyle = {
-  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-  background: 'white', border: '1px solid var(--color-border)', borderRadius: 999,
-  padding: '11px', fontWeight: 500, fontSize: 13, color: 'var(--color-ink)',
-}
-
 function LogoIcon() {
   return (
     <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
@@ -249,17 +222,6 @@ function EyeIcon({ open }) {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M17.9 17.9A10.9 10.9 0 0 1 12 20c-7 0-11-8-11-8a19.5 19.5 0 0 1 5-5.6M9.9 4.2A10 10 0 0 1 12 4c7 0 11 8 11 8a19.6 19.6 0 0 1-2.2 3.1M14.1 14.1a3 3 0 1 1-4.2-4.2" />
       <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  )
-}
-
-function GoogleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24">
-      <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.4H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.7z" />
-      <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.9-3c-1.1.7-2.4 1.1-4 1.1-3.1 0-5.7-2.1-6.6-4.9H1.4v3.1C3.4 21.3 7.4 24 12 24z" />
-      <path fill="#FBBC05" d="M5.4 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3V6.6H1.4A12 12 0 0 0 0 12c0 1.9.5 3.8 1.4 5.4z" />
-      <path fill="#EA4335" d="M12 4.8c1.7 0 3.3.6 4.5 1.7l3.4-3.4C17.9 1.2 15.2 0 12 0 7.4 0 3.4 2.7 1.4 6.6l4 3.1c.9-2.8 3.5-4.9 6.6-4.9z" />
     </svg>
   )
 }

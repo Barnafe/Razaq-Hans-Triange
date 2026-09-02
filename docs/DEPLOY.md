@@ -78,6 +78,44 @@ git push
 
 Render auto-deploys on every push to `main`. No other steps needed.
 
+## 6. Adding email notifications (Brevo)
+
+Added after deployment: password reset emails, and an email to a patient
+when their assessment is approved and assigned to a doctor. Uses Brevo's
+HTTP API (not SMTP -- Render's free tier blocks outbound SMTP ports).
+
+**a) Run the migration** against your existing database (adds `email`,
+`reset_token`, `reset_token_expires` columns to `users`; safe to run more
+than once):
+```
+psql "<your-database-url>" -f backend/app/db/migration_email_notifications.sql
+```
+
+**b) Get a Brevo API key**: sign up at brevo.com (free tier: 300
+emails/day) -> Settings -> SMTP & API -> generate a new API key. Also
+verify a sender email/domain there -- Brevo rejects sends from an
+unverified sender.
+
+**c) Add environment variables** on your Web Service (Environment tab,
+same place as `DATABASE_URL`):
+- `BREVO_API_KEY` = the key from step (b)
+- `BREVO_SENDER_EMAIL` = the verified sender address from step (b)
+- `BREVO_SENDER_NAME` = display name, e.g. `HANS-Triage` (optional, has a default)
+- `APP_BASE_URL` = your real `https://your-app.onrender.com` URL --
+  used to build the link inside password reset emails. Without this
+  set correctly, the reset link in the email will point to
+  `localhost` and won't work for the patient.
+
+Save, let Render redeploy, then test: use "Forgot Password?" on the
+login page with a real email you can check, and separately approve a
+patient submission as admin (with that patient's account having an
+email on file) to test the approval alert.
+
+If `BREVO_API_KEY` is missing, email sending is silently skipped (logged
+in the server logs, not sent) -- registration, login, and the approval
+workflow itself all keep working either way; only the notification
+emails are affected.
+
 ## Troubleshooting
 
 - **Build fails at `npm run build`**: check the Logs tab for the actual

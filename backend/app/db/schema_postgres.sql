@@ -24,6 +24,19 @@ CREATE TABLE users (
     -- ("Available Doctors" card). Defaults true so existing accounts and
     -- non-doctor roles are unaffected.
     is_available  BOOLEAN NOT NULL DEFAULT TRUE,
+    -- Added for email notifications (password reset, approval alerts).
+    -- Nullable: accounts created before this feature existed won't have
+    -- one until the user sets it, and email is not required to log in.
+    email                VARCHAR(255) UNIQUE,
+    reset_token          VARCHAR(64),
+    reset_token_expires  TIMESTAMP,
+    -- Added for email verification (OTP sent at signup): confirms the
+    -- email is real and reachable before it's relied on for password
+    -- recovery / approval alerts. Nullable/false by default so accounts
+    -- created without an email (email is optional) are unaffected.
+    email_verified            BOOLEAN NOT NULL DEFAULT FALSE,
+    verification_code         VARCHAR(6),
+    verification_code_expires TIMESTAMP,
     created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

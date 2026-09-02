@@ -448,3 +448,31 @@ def get_patient_history(patient_user_id: int) -> list[dict]:
             )
             rows = cur.fetchall()
     return [_decision_row_to_dict(r) for r in rows]
+
+
+def get_decision_notification_info(decision_id: int) -> dict | None:
+    """
+    What's needed to notify a patient their case was approved: their own
+    email (via patient -> user), the assigned doctor's username, and the
+    final tier. Returns None if the patient never registered their own
+    account (email/reset are self-service, so a clinician-recorded
+    patient with no login simply has nothing to notify) or has no email
+    on file -- callers should skip sending in that case, not error.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT pu.email, doc.username, td.final_tier
+                   FROM triage_decisions td
+                   JOIN encounters e ON td.encounter_id = e.encounter_id
+                   JOIN patients p ON e.patient_id = p.patient_id
+                   LEFT JOIN users pu ON p.user_id = pu.user_id
+                   LEFT JOIN users doc ON td.assigned_doctor_id = doc.user_id
+                   WHERE td.decision_id = %s""",
+                (decision_id,),
+            )
+            row = cur.fetchone()
+
+    if row is None or row[0] is None:
+        return None
+    return {"patient_email": row[0], "doctor_username": row[1], "tier": row[2]}
