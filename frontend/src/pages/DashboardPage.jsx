@@ -102,18 +102,20 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: '#F7F9FA', textAlign: 'left' }}>
-                    <Th></Th><Th>Patient</Th><Th>Age</Th><Th>Tier</Th><Th>Top Diagnosis</Th><Th>When</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {encounters.map((e) => (
-                    <ExpandableRow key={e.decision_id} encounter={e} tierColor={TIER_COLORS[e.tier]} />
-                  ))}
-                </tbody>
-              </table>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#F7F9FA', textAlign: 'left' }}>
+                      <Th></Th><Th>Patient</Th><Th>Age</Th><Th>Tier</Th><Th>Top Diagnosis</Th><Th>When</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {encounters.map((e) => (
+                      <ExpandableRow key={e.decision_id} encounter={e} tierColor={TIER_COLORS[e.tier]} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>
@@ -146,7 +148,7 @@ function ExpandableRow({ encounter: e, tierColor }) {
       {open && (
         <tr style={{ borderTop: '1px solid var(--color-border)' }}>
           <td colSpan={6} style={{ padding: 'var(--space-4) 16px 16px 44px', background: '#FAFBFC' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-ink-muted)', marginBottom: 4 }}>
                   DIFFERENTIAL DIAGNOSIS

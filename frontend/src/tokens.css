@@ -54,12 +54,78 @@
 
 * { box-sizing: border-box; }
 
-body {
+html, body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  /* Stops small overflows (a slightly-too-wide table, a fixed-width
+     card) from producing a whole-page horizontal scrollbar on phones. */
+  overflow-x: hidden;
+  width: 100%;
+}
+
+img, svg { max-width: 100%; }
+
+/* ---- Mobile sidebar / hamburger menu (Layout.jsx) ----
+   Desktop: unchanged, sidebar is a normal static flex column (no rule
+   below applies above 860px). Mobile: sidebar becomes a fixed slide-in
+   drawer, collapsed behind a 3-line hamburger button by default. */
+.hans-hamburger {
+  display: none;
+}
+
+.hans-sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .hans-hamburger {
+    display: flex;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 70;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--color-sidebar-bg);
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .hans-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    max-width: 82vw;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 65;
+    overflow-y: auto;
+  }
+
+  .hans-sidebar.hans-sidebar-open {
+    transform: translateX(0);
+  }
+
+  .hans-sidebar-backdrop.hans-sidebar-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 12, 18, 0.5);
+    z-index: 60;
+  }
+
+  .hans-main-content {
+    padding-top: 68px !important;
+  }
 }
 
 h1, h2, h3 {

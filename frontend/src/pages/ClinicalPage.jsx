@@ -118,7 +118,7 @@ function PatientCard({ decision: d, onAttend }) {
 
       {open && (
         <div style={{ padding: '0 var(--space-5) var(--space-5)', borderTop: '1px solid var(--color-border)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 'var(--space-4)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginTop: 'var(--space-4)' }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-ink-muted)', marginBottom: 4 }}>DIFFERENTIAL DIAGNOSIS</div>
               {(d.differential_diagnosis || []).length === 0 ? (

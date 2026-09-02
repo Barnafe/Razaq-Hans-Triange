@@ -7,10 +7,13 @@ import { register, verifyEmail, resendVerification } from '../api/client'
 // user. Matches the login page's visual style for consistency.
 //
 // Three stages: 'form' (fill in details) -> 'verify' (enter the emailed
-// code -- only reached if an email was given and sending succeeded) ->
-// 'done'. If no email was given, or sending failed, we skip straight to
-// 'done' -- verification is a bonus on top of a working account, never
-// a blocker to actually using it.
+// code -- reached whenever an email was given, whether or not sending
+// it succeeded) -> 'done'. If no email was given at all, email
+// verification doesn't apply and we go straight to 'done'. Otherwise
+// the account exists in the database the moment 'verify' is reached,
+// but auth.py's login gate (EmailNotVerified) refuses to sign it in
+// until the code here is confirmed -- so this really is a required
+// step, not a bonus on top of an already-usable account.
 
 export default function SignUpPage() {
   const [stage, setStage] = useState('form')
@@ -26,6 +29,7 @@ export default function SignUpPage() {
   const [verifyError, setVerifyError] = useState(null)
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [resendMessage, setResendMessage] = useState(null)
+  const [initialSendFailed, setInitialSendFailed] = useState(false)
 
   const navigate = useNavigate()
 
@@ -45,7 +49,12 @@ export default function SignUpPage() {
     setLoading(true)
     try {
       const result = await register(username, password, role, email || null)
-      if (email && result.email_verification_sent) {
+      if (email) {
+        // The account now exists but is unusable until the code below
+        // is confirmed (see auth.py's EmailNotVerified / login gate) --
+        // so this is a real requirement, not a skippable extra step,
+        // regardless of whether the first send succeeded.
+        setInitialSendFailed(!result.email_verification_sent)
         setStage('verify')
       } else {
         setStage('done')
@@ -93,7 +102,7 @@ export default function SignUpPage() {
       <div
         style={{
           background: 'var(--color-surface)', borderRadius: 20,
-          padding: 'var(--space-12) var(--space-8)', width: 400,
+          padding: 'var(--space-12) clamp(20px, 6vw, var(--space-8))', width: 'min(400px, 92vw)',
           boxShadow: '0 24px 70px rgba(10, 40, 44, 0.3)',
         }}
       >
@@ -118,7 +127,8 @@ export default function SignUpPage() {
                 <span style={{ fontSize: 11, color: 'var(--color-ink-muted)' }}>
                   Optional, but needed for "Forgot Password" and (for patients)
                   email alerts when your assessment is approved. If given,
-                  you'll be asked to confirm it with a code before you're done.
+                  you'll need to confirm it with a code before you can sign
+                  in — this isn't a skippable step.
                 </span>
               </Field>
               <Field label="Password">
@@ -159,9 +169,15 @@ export default function SignUpPage() {
             <h1 style={{ textAlign: 'center', fontSize: 24, marginBottom: 'var(--space-2)' }}>
               Verify Your Email
             </h1>
-            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-ink-muted)', marginBottom: 'var(--space-8)' }}>
-              We sent a 6-digit code to <strong>{email}</strong>. Enter it below to confirm.
+            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-ink-muted)', marginBottom: initialSendFailed ? 'var(--space-3)' : 'var(--space-8)' }}>
+              We sent a 6-digit code to <strong>{email}</strong>. Enter it below to confirm —
+              your account has been created, but you won't be able to sign in until this is done.
             </p>
+            {initialSendFailed && (
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--tier-orange)', marginBottom: 'var(--space-6)' }}>
+                We couldn't send that first email. Tap "Resend code" below to try again.
+              </p>
+            )}
 
             <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               <Field label="Verification Code">
@@ -188,9 +204,6 @@ export default function SignUpPage() {
                 Resend code
               </button>
               {resendMessage && <div style={{ marginTop: 6 }}>{resendMessage}</div>}
-            </div>
-            <div style={{ textAlign: 'center', fontSize: 12, marginTop: 'var(--space-3)' }}>
-              <Link to="/" style={{ color: 'var(--color-ink-muted)' }}>Skip for now, sign in later</Link>
             </div>
           </>
         )}

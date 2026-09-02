@@ -28,8 +28,8 @@ from orchestrator import run_pipeline
 from rule_engine import PatientInput
 from vision_agent import inflammation_score, vision_flag_for_triage
 from auth import (
-    authenticate, register, UsernameTaken, create_password_reset_token, reset_password_with_token,
-    generate_verification_code, verify_email,
+    authenticate, register, UsernameTaken, EmailNotVerified, create_password_reset_token,
+    reset_password_with_token, generate_verification_code, verify_email,
 )
 from persistence import (
     persist_triage_decision, get_recent_decisions, get_all_users,
@@ -141,6 +141,16 @@ def login(request: LoginRequest):
     """
     try:
         result = authenticate(request.username, request.password)
+    except EmailNotVerified as e:
+        # Correct password, but the account's email is still unconfirmed
+        # -- this is the actual verification gate (see auth.py). detail
+        # is a structured dict, not a plain string, so the frontend can
+        # pull out the email and drop the user straight into the
+        # "enter your code" flow instead of just showing an error.
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "email_not_verified", "email": e.email},
+        )
     except Exception as e:
         raise HTTPException(
             status_code=503,

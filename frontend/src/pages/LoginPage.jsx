@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { login } from '../api/client'
+import { login, verifyEmail, resendVerification } from '../api/client'
 
 // Rebuilt to closely match the supervisor's actual reference design:
 // teal gradient bg, decorative icon circles, white card, "Welcome Back!"
@@ -19,31 +19,79 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
+  // Reached instead of a normal error when the password was correct but
+  // the account's email hasn't been confirmed yet (see auth.py's
+  // EmailNotVerified) -- rather than dead-ending with an error message,
+  // this drops the user straight into entering their code, then retries
+  // the exact same login automatically once it's confirmed.
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [verifyEmailAddr, setVerifyEmailAddr] = useState('')
+  const [code, setCode] = useState('')
+  const [verifyError, setVerifyError] = useState(null)
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState(null)
+
+  function completeLogin(result) {
+    // HONEST NOTE: this is client-side-only identity storage, not a
+    // real session/token -- see auth.py's docstring. Good enough to
+    // drive which nav links show and which user_id gets sent with
+    // requests that need one (submitting as a patient, approving as
+    // an admin, attending as a doctor). NOT a real access-control
+    // boundary -- the API endpoints themselves aren't protected by
+    // this, and anyone could edit these values directly. Flagged
+    // clearly for the defense Q&A, not hidden.
+    localStorage.setItem('hans_triage_role', result.role)
+    localStorage.setItem('hans_triage_user_id', String(result.user_id))
+    localStorage.setItem('hans_triage_username', identifier)
+    if (result.role === 'patient') navigate('/dashboard/patient')
+    else if (result.role === 'doctor') navigate('/dashboard/doctor')
+    else if (result.role === 'admin') navigate('/admin')
+    else navigate('/intake')
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
     setLoading(true)
     try {
       const result = await login(identifier, password)
-      // HONEST NOTE: this is client-side-only identity storage, not a
-      // real session/token -- see auth.py's docstring. Good enough to
-      // drive which nav links show and which user_id gets sent with
-      // requests that need one (submitting as a patient, approving as
-      // an admin, attending as a doctor). NOT a real access-control
-      // boundary -- the API endpoints themselves aren't protected by
-      // this, and anyone could edit these values directly. Flagged
-      // clearly for the defense Q&A, not hidden.
-      localStorage.setItem('hans_triage_role', result.role)
-      localStorage.setItem('hans_triage_user_id', String(result.user_id))
-      localStorage.setItem('hans_triage_username', identifier)
-      if (result.role === 'patient') navigate('/dashboard/patient')
-      else if (result.role === 'doctor') navigate('/dashboard/doctor')
-      else if (result.role === 'admin') navigate('/admin')
-      else navigate('/intake')
+      completeLogin(result)
     } catch (err) {
-      setError(err.message || 'Login failed.')
+      if (err.code === 'email_not_verified') {
+        setVerifyEmailAddr(err.email)
+        setNeedsVerification(true)
+      } else {
+        setError(err.message || 'Login failed.')
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleVerify(e) {
+    e.preventDefault()
+    setVerifyError(null)
+    setVerifyLoading(true)
+    try {
+      await verifyEmail(verifyEmailAddr, code)
+      // Code confirmed -- now that email_verified is true, the exact
+      // same credentials the user already typed will succeed.
+      const result = await login(identifier, password)
+      completeLogin(result)
+    } catch (err) {
+      setVerifyError(err.message || 'Verification failed.')
+    } finally {
+      setVerifyLoading(false)
+    }
+  }
+
+  async function handleResend() {
+    setResendMessage(null)
+    try {
+      await resendVerification(verifyEmailAddr)
+      setResendMessage('A new code has been sent.')
+    } catch (err) {
+      setResendMessage(err.message || 'Could not resend code.')
     }
   }
 
@@ -82,8 +130,8 @@ export default function LoginPage() {
         style={{
           background: 'var(--color-surface)',
           borderRadius: 20,
-          padding: 'var(--space-12) var(--space-8)',
-          width: 400,
+          padding: 'var(--space-12) clamp(20px, 6vw, var(--space-8))',
+          width: 'min(400px, 92vw)',
           position: 'relative',
           boxShadow: '0 24px 70px rgba(10, 40, 44, 0.3)',
         }}
@@ -92,66 +140,116 @@ export default function LoginPage() {
           <LogoIcon />
         </div>
 
-        <h1 style={{ textAlign: 'center', fontSize: 24, marginBottom: 'var(--space-8)' }}>
-          Welcome Back!
-        </h1>
+        {!needsVerification ? (
+          <>
+            <h1 style={{ textAlign: 'center', fontSize: 24, marginBottom: 'var(--space-8)' }}>
+              Welcome Back!
+            </h1>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <Field label="Email or No. Handphone" icon={<PersonIcon />}>
-            <input
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="you@example.com"
-              style={inputStyle}
-              required
-            />
-          </Field>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <Field label="Email or No. Handphone" icon={<PersonIcon />}>
+                <input
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="you@example.com"
+                  style={inputStyle}
+                  required
+                />
+              </Field>
 
-          <Field
-            label="Password"
-            icon={
+              <Field
+                label="Password"
+                icon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <EyeIcon open={showPassword} />
+                  </button>
+                }
+              >
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={inputStyle}
+                  required
+                />
+              </Field>
+
+              <div style={{ textAlign: 'right', marginTop: -6 }}>
+                <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--color-teal)', textDecoration: 'none' }}>
+                  Forgot Password?
+                </Link>
+              </div>
+
+              {error && (
+                <div style={{ fontSize: 12, color: 'var(--tier-red)', textAlign: 'center' }}>{error}</div>
+              )}
+
+              <button type="submit" disabled={loading} style={signInButtonStyle}>
+                {loading ? 'Signing in…' : 'Sign In'}
+              </button>
+            </form>
+
+            <div style={{ textAlign: 'center', fontSize: 12, marginTop: 'var(--space-4)', color: 'var(--color-ink-muted)' }}>
+              Don't have an account? <Link to="/signup" style={{ color: 'var(--color-teal)', fontWeight: 600 }}>Sign Up</Link>
+            </div>
+
+            <div style={{ marginTop: 'var(--space-4)', fontSize: 10, color: 'var(--color-ink-muted)', textAlign: 'center' }}>
+              Demo credentials: nurse_amina / TriageDemo2026! (see scripts/seed_demo_user.py)
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 style={{ textAlign: 'center', fontSize: 24, marginBottom: 'var(--space-2)' }}>
+              Verify Your Email
+            </h1>
+            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-ink-muted)', marginBottom: 'var(--space-8)' }}>
+              Your password is correct, but <strong>{verifyEmailAddr}</strong> hasn't been
+              confirmed yet. Enter the 6-digit code we sent to finish signing in.
+            </p>
+
+            <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <Field label="Verification Code">
+                <input
+                  value={code} onChange={(e) => setCode(e.target.value)}
+                  style={{ ...inputStyle, textAlign: 'center', fontSize: 22, letterSpacing: 6 }}
+                  placeholder="000000" maxLength={6} required
+                />
+              </Field>
+
+              {verifyError && <div style={{ fontSize: 12, color: 'var(--tier-red)', textAlign: 'center' }}>{verifyError}</div>}
+
+              <button type="submit" disabled={verifyLoading} style={signInButtonStyle}>
+                {verifyLoading ? 'Verifying…' : 'Verify & Sign In'}
+              </button>
+            </form>
+
+            <div style={{ textAlign: 'center', fontSize: 12, marginTop: 'var(--space-6)', color: 'var(--color-ink-muted)' }}>
+              Didn't get it?{' '}
+              <button
+                type="button" onClick={handleResend}
+                style={{ background: 'none', border: 'none', color: 'var(--color-teal)', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+              >
+                Resend code
+              </button>
+              {resendMessage && <div style={{ marginTop: 6 }}>{resendMessage}</div>}
+            </div>
+            <div style={{ textAlign: 'center', fontSize: 12, marginTop: 'var(--space-3)' }}>
               <button
                 type="button"
-                onClick={() => setShowPassword((s) => !s)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => { setNeedsVerification(false); setError(null) }}
+                style={{ background: 'none', border: 'none', color: 'var(--color-ink-muted)', cursor: 'pointer', padding: 0, fontSize: 12 }}
               >
-                <EyeIcon open={showPassword} />
+                ← Back to sign in
               </button>
-            }
-          >
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              style={inputStyle}
-              required
-            />
-          </Field>
-
-          <div style={{ textAlign: 'right', marginTop: -6 }}>
-            <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--color-teal)', textDecoration: 'none' }}>
-              Forgot Password?
-            </Link>
-          </div>
-
-          {error && (
-            <div style={{ fontSize: 12, color: 'var(--tier-red)', textAlign: 'center' }}>{error}</div>
-          )}
-
-          <button type="submit" disabled={loading} style={signInButtonStyle}>
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
-        </form>
-
-        <div style={{ textAlign: 'center', fontSize: 12, marginTop: 'var(--space-4)', color: 'var(--color-ink-muted)' }}>
-          Don't have an account? <Link to="/signup" style={{ color: 'var(--color-teal)', fontWeight: 600 }}>Sign Up</Link>
-        </div>
-
-        <div style={{ marginTop: 'var(--space-4)', fontSize: 10, color: 'var(--color-ink-muted)', textAlign: 'center' }}>
-          Demo credentials: nurse_amina / TriageDemo2026! (see scripts/seed_demo_user.py)
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

@@ -32,6 +32,16 @@ export async function login(username, password) {
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
+    // The backend sends a structured detail object (not a plain string)
+    // specifically for the "correct password, unverified email" case,
+    // so the login page can drop the user straight into the verify-code
+    // flow instead of just showing a dead-end error.
+    if (body.detail && typeof body.detail === 'object' && body.detail.error === 'email_not_verified') {
+      const err = new Error('Please verify your email before signing in.')
+      err.code = 'email_not_verified'
+      err.email = body.detail.email
+      throw err
+    }
     throw new Error(body.detail || `Login failed: HTTP ${res.status}`)
   }
   return res.json()

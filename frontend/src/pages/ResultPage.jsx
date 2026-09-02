@@ -154,7 +154,7 @@ export default function ResultPage() {
       {/* Three summary mini-cards -- same rhythm as the reference's
           Symptoms/Duration/Risk Score row, using only real fields we
           actually have (no invented "risk score out of 10"). */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 'var(--space-6)' }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 'var(--space-6)', flexWrap: 'wrap' }}>
         <MiniCard
           label="Symptoms Reported"
           value={submittedSymptoms.length || '—'}

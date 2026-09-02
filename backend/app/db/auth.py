@@ -43,9 +43,27 @@ def verify_password(password: str, stored_hash: str) -> bool:
     return secrets.compare_digest(expected, stored_hash)
 
 
+class EmailNotVerified(Exception):
+    """
+    Raised by authenticate() when the credentials are correct but the
+    account has an email on file that hasn't been confirmed yet.
+
+    This is what actually makes email verification a real gate rather
+    than decoration: an unverified account can be created (see
+    register()), but authenticate() refuses to log it in until
+    verify_email() has succeeded. Carries the account's email so the
+    caller can offer a "verify now" flow without a second lookup.
+    """
+    def __init__(self, email: str):
+        self.email = email
+        super().__init__(f"Email '{email}' has not been verified yet")
+
+
 def authenticate(identifier: str, password: str) -> dict | None:
     """
-    Returns {"user_id": ..., "role": ...} on success, None on failure.
+    Returns {"user_id": ..., "role": ...} on success, None on wrong
+    username/password, or raises EmailNotVerified if the password is
+    correct but the account's email (if it has one) isn't confirmed yet.
     'identifier' can be either the account's username OR its email --
     the login page has always been labeled "Email or No. Handphone", but
     this only ever matched on username until now, which was a real bug:
@@ -57,7 +75,7 @@ def authenticate(identifier: str, password: str) -> dict | None:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """SELECT u.user_id, u.password_hash, r.role_name
+                """SELECT u.user_id, u.password_hash, r.role_name, u.email, u.email_verified
                    FROM users u JOIN roles r ON u.role_id = r.role_id
                    WHERE u.username = %s OR u.email = %s""",
                 (identifier, identifier),
@@ -71,9 +89,15 @@ def authenticate(identifier: str, password: str) -> dict | None:
         hash_password(password)
         return None
 
-    user_id, stored_hash, role_name = row
+    user_id, stored_hash, role_name, email, email_verified = row
     if not verify_password(password, stored_hash):
         return None
+
+    # Account exists and the password is right, but if they gave an
+    # email at signup it has to be confirmed before the account is
+    # usable -- otherwise "verification" was purely cosmetic.
+    if email and not email_verified:
+        raise EmailNotVerified(email)
 
     return {"user_id": user_id, "role": role_name}
 

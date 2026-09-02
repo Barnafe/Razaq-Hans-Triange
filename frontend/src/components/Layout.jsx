@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 
 const clinicianNavItems = [
@@ -25,6 +25,13 @@ export default function Layout() {
     role === 'doctor' ? doctorNavItems :
     clinicianNavItems
 
+  // Only matters on mobile (see .hans-sidebar rules in tokens.css) --
+  // on desktop the sidebar is always visible regardless of this state,
+  // since the CSS that reacts to it only kicks in under the 860px
+  // breakpoint. Closed by default so phones land on a clean page, not
+  // an open drawer covering the content.
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   function handleLogout() {
     // HONEST NOTE: no real session/token exists yet to invalidate server-
     // side (see backend/app/db/auth.py docstring) -- this clears the
@@ -37,7 +44,21 @@ export default function Layout() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <button
+        className="hans-hamburger"
+        onClick={() => setSidebarOpen((v) => !v)}
+        aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+      >
+        {sidebarOpen ? <CloseIcon /> : <HamburgerIcon />}
+      </button>
+
+      <div
+        className={`hans-sidebar-backdrop${sidebarOpen ? ' hans-sidebar-open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
       <aside
+        className={`hans-sidebar${sidebarOpen ? ' hans-sidebar-open' : ''}`}
         style={{
           width: 240,
           background: 'var(--color-sidebar-bg)',
@@ -70,6 +91,7 @@ export default function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
+              onClick={() => setSidebarOpen(false)}
               style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '10px 12px',
@@ -107,7 +129,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <main className="hans-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div
           style={{
             background: 'var(--tier-yellow-bg)', borderBottom: '1px solid var(--tier-yellow)',
@@ -116,7 +138,7 @@ export default function Layout() {
         >
           ⚠ This system provides advisory decision support only and is not a replacement for clinical judgment. All recommendations must be verified by a qualified healthcare professional.
         </div>
-        <div style={{ padding: 'var(--space-8)', flex: 1, background: 'var(--color-bg)' }}>
+        <div style={{ padding: 'var(--space-8)', flex: 1, background: 'var(--color-bg)', minWidth: 0 }}>
           <Outlet />
         </div>
       </main>
@@ -143,6 +165,20 @@ function ShieldIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
+    </svg>
+  )
+}
+function HamburgerIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  )
+}
+function CloseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   )
 }

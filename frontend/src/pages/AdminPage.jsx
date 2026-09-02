@@ -82,15 +82,16 @@ export default function AdminPage() {
       )}
 
       {/* Stat cards */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 'var(--space-6)' }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 'var(--space-6)', flexWrap: 'wrap' }}>
         <StatCard label="Total Patients" value={stats?.total_patients ?? '—'} />
         <StatCard label="Pending Review" value={stats?.pending_count ?? '—'} accent="var(--tier-yellow)" />
         <StatCard label="Available Doctors" value={stats?.available_doctors_count ?? '—'} accent="var(--tier-green)" />
         <StatCard label="Total Assessments" value={stats?.total_assessments ?? '—'} />
       </div>
 
-      {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 'var(--space-6)' }}>
+      {/* Charts row -- auto-fit collapses to a single column on narrow
+          screens instead of squeezing two charts side by side */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginBottom: 'var(--space-6)' }}>
         <ChartCard title="Assessments Over Time (7 days)">
           {stats && stats.assessments_by_day.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -130,7 +131,7 @@ export default function AdminPage() {
       </div>
 
       {/* Quick links + Recent activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 12, marginBottom: 'var(--space-8)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12, marginBottom: 'var(--space-8)' }}>
         <ChartCard title="Quick Links">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <Link to="/intake" style={quickLinkStyle}>+ New Assessment</Link>
@@ -184,7 +185,7 @@ export default function AdminPage() {
       <h2 style={{ fontSize: 18, marginBottom: 'var(--space-4)' }}>Registered Users</h2>
       {users && (
         <>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 'var(--space-6)' }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 'var(--space-6)', flexWrap: 'wrap' }}>
             <StatCard label="Total Users" value={users.length} small />
             <StatCard label="Clinicians" value={roleCounts.clinician || 0} small />
             <StatCard label="Doctors" value={roleCounts.doctor || 0} small />
@@ -193,30 +194,32 @@ export default function AdminPage() {
           </div>
 
           <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: '#F7F9FA', textAlign: 'left' }}>
-                  <th style={thStyle}>Username</th><th style={thStyle}>Role</th><th style={thStyle}>Registered</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u, i) => (
-                  <tr key={i} style={{ borderTop: '1px solid var(--color-border)' }}>
-                    <td style={tdStyle}>{u.username}</td>
-                    <td style={tdStyle}>
-                      <span style={{
-                        fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-                        background: u.role === 'admin' ? 'var(--tier-orange-bg)' : 'var(--color-teal-light)',
-                        color: u.role === 'admin' ? 'var(--tier-orange)' : 'var(--color-teal)',
-                      }}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>{new Date(u.created_at).toLocaleString()}</td>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#F7F9FA', textAlign: 'left' }}>
+                    <th style={thStyle}>Username</th><th style={thStyle}>Role</th><th style={thStyle}>Registered</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map((u, i) => (
+                    <tr key={i} style={{ borderTop: '1px solid var(--color-border)' }}>
+                      <td style={tdStyle}>{u.username}</td>
+                      <td style={tdStyle}>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+                          background: u.role === 'admin' ? 'var(--tier-orange-bg)' : 'var(--color-teal-light)',
+                          color: u.role === 'admin' ? 'var(--tier-orange)' : 'var(--color-teal)',
+                        }}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td style={tdStyle}>{new Date(u.created_at).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}

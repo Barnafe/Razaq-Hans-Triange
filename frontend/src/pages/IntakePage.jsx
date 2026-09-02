@@ -135,7 +135,7 @@ export default function IntakePage() {
                 If you don't have a way to measure one of these, note it when you see a doctor.
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-4)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--space-4)' }}>
               <VitalField label="Temperature (°C)" value={vitals.temperature} onChange={(v) => updateVital('temperature', v)} />
               <VitalField label="Heart rate (bpm)" value={vitals.heart_rate} onChange={(v) => updateVital('heart_rate', v)} />
               <VitalField label="Respiratory rate" value={vitals.respiratory_rate} onChange={(v) => updateVital('respiratory_rate', v)} />
@@ -148,7 +148,7 @@ export default function IntakePage() {
 
         {step === 2 && (
           <StepBlock title="Symptoms" subtitle="Which symptoms does the patient have?" icon={<ListIcon />}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px 24px' }}>
               {SYMPTOMS.map((s) => (
                 <ToggleSwitch key={s} checked={symptoms.has(s)} onChange={() => toggleSymptom(s)} label={s} />
               ))}
